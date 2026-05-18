@@ -1,0 +1,24 @@
+# Ignore Go vendor directory
+vendor/
+
+# Ignore binary files
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Ignore test result files
+*.out
+
+# Ignore IDE/editor config files
+.idea/
+.vscode/
+*.swp
+
+# Ignore logs
+*.log
+
+# Ignore OS-specific files
+.DS_Store
+Thumbs.db
