@@ -60,4 +60,13 @@ func (m *MockPoller) Len() int {
 }
 
 
+func (m *MockPoller) Requeue(t *task.Task) {
+    m.mu.Lock()
+    defer m.mu.Unlock()
+
+    // put it at the front so it gets picked up next
+    m.tasks = append([]*task.Task{t}, m.tasks...)
+}
+
+
 var _ Poller = (*MockPoller)(nil)
