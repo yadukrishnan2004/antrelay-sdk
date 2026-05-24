@@ -3,6 +3,7 @@ package worker_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/yadukrishnan2004/antrelay-sdk/executor"
@@ -22,7 +23,7 @@ func setup(handlers map[string]task.HandlerFunc)(*worker.Worker,*poller.MockPoll
 	p := poller.NewMock()
 	rep := reporter.NewMock()
 	ex := executor.New(r)
-	w := worker.New(p, ex, rep, "test-queue")
+    w := worker.New(p, ex, rep, "test-queue", 100*time.Millisecond)
 
 	return w, p, rep
 }

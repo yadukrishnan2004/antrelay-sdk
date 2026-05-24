@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/yadukrishnan2004/antrelay-sdk/client"
 )
@@ -22,10 +23,15 @@ func sendEmail(_ context.Context, input []byte) ([]byte, error) {
 }
 
 func main(){
-		c := client.New(client.Config{
-		ServerURL: "http://localhost:8080",
-		Queue:     "orders-queue",
-	})
+c := client.New(
+    client.Config{
+        ServerURL: "http://localhost:8080",
+        Queue:     "orders-queue",
+    },
+    client.WithPollInterval(500*time.Millisecond),
+    client.WithHandlerTimeout(30*time.Second),
+    client.WithMaxPollRetries(5),
+)
 
 	if err := c.Register("processOrder", processOrder); err != nil {
 		fmt.Fprintf(os.Stderr, "failed to register handler: %v\n", err)

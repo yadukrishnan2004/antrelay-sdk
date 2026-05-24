@@ -23,13 +23,14 @@ func New(
 	e *executor.Executor,
 	r reporter.Reporter,
 	queue string,
+	pollInterval time.Duration,
 )*Worker{
 	return &Worker{
 		poller: p,
 		executor: e,
 		reporter: r,
 		queue: queue,
-		pollWait: 2*time.Second,
+		pollWait: pollInterval,
 	}
 }
 
