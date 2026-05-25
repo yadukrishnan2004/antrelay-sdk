@@ -2,7 +2,7 @@ package worker
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"time"
 
 	"github.com/yadukrishnan2004/antrelay-sdk/executor"
@@ -38,50 +38,62 @@ func New(
 
 //starting the worker loop
 
-func (w *Worker) Run(ctx context.Context){
-	log.Printf("worker:starting on queue %q",w.queue)
+func (w *Worker) Run(ctx context.Context) {
+    slog.Info("worker starting", "queue", w.queue)
 
-	for{
+    for {
+        select {
+        case <-ctx.Done():
+            slog.Info("worker shutting down", "queue", w.queue)
+            return
+        default:
+        }
 
-		select{
-		case <-ctx.Done():
-			log.Printf("Worker shutting down")
-			return
-		default:
-		}
+        t, err := w.poller.Poll(w.queue)
+        if err != nil {
+            slog.Error("poll failed",
+                "queue", w.queue,
+                "error", err,
+                "retry_in", w.backoff.current,
+            )
+            w.Sleep(ctx, w.backoff.Next())
+            continue
+        }
 
-		//asking the worker poll to next work
+        if t == nil {
+            w.Sleep(ctx, w.backoff.Next())
+            continue
+        }
 
-		t,err:=w.poller.Poll(w.queue)
-		if err!=nil{
-			log.Printf("worker: poll error:%v",err)
-			w.Sleep(ctx ,w.backoff.Next())
-			continue
-		}
+        w.backoff.Reset()
 
-		if t==nil{
-			w.Sleep(ctx, w.backoff.Next())
-			continue
-		}
+        slog.Info("executing task",
+            "task_id", t.ID,
+            "function", t.FunctionName,
+            "retry_count", t.RetryCount,
+        )
 
-		w.backoff.Reset()
+        result := w.executor.Executor(ctx, t)
 
-		log.Printf("worker: executing task %s (%s)", t.ID, t.FunctionName)
+        if !result.Success && t.CanRetry() {
+            t.IncrementRetry()
+            slog.Warn("task failed, requeueing",
+                "task_id", t.ID,
+                "attempt", t.RetryCount,
+                "max_retries", t.MaxRetries,
+                "error", result.Error,
+            )
+            w.poller.Requeue(t)
+            continue
+        }
 
-		result := w.executor.Executor(ctx, t)
-
-		if !result.Success && t.CanRetry(){
-			t.IncrementRetry()
-			log.Printf("worker: retrying task %s (attempt %d/%d)",
-				t.ID, t.RetryCount, t.MaxRetries)
-			w.poller.Requeue(t)
-			continue
-		}
-
-		if err := w.reporter.Report(result); err != nil {
-			log.Printf("worker: failed to report result for task %s: %v", t.ID, err)
-		}
-	}
+        if err := w.reporter.Report(result); err != nil {
+            slog.Error("failed to report result",
+                "task_id", t.ID,
+                "error", err,
+            )
+        }
+    }
 }
 
 func (w *Worker) Sleep(ctx context.Context,d time.Duration){

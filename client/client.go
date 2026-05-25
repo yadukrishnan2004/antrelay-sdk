@@ -2,8 +2,9 @@ package client
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"time"
+
 	"github.com/yadukrishnan2004/antrelay-sdk/executor"
 	"github.com/yadukrishnan2004/antrelay-sdk/poller"
 	"github.com/yadukrishnan2004/antrelay-sdk/registry"
@@ -103,13 +104,18 @@ func (c *Client) Start(){
 
 //-------------------------------------------------------------	
 
-	log.Printf("client: starting worker on queue %q", c.config.Queue)
+   slog.Info("client starting",
+        "queue", c.config.Queue,
+        "server", c.config.ServerURL,
+        "poll_interval", c.opts.pollInterval,
+        "handler_timeout", c.opts.handlerTimeout,
+    )
 	go w.Run(ctx)
 }
 
 func (c *Client) Stop() {
 	if c.cancel != nil {
-		log.Printf("client: stopping worker")
+		slog.Info("client stopping", "queue", c.config.Queue)
 		c.cancel()
 	}
 }

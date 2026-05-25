@@ -29,7 +29,7 @@ func (p *HTTPPoller) Poll(queue string)(*task.Task,error){
 
 	resp,err:=p.httpClient.Get(url)
 	if err != nil{
-		return nil,fmt.Errorf("poller: http request faild: %w", err)
+		return nil,fmt.Errorf("poller: http request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
