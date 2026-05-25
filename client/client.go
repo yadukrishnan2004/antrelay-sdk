@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -72,7 +73,10 @@ type Client struct{
 	cancel  context.CancelFunc
 }
 
-func New(cfg Config, optFns ...Option) *Client {
+func New(cfg Config, optFns ...Option) (*Client,error) {
+	if err := cfg.validate(); err != nil {
+		return nil, err
+	}
 	opts := defaultOptions()
 
 	for _, fn := range optFns {
@@ -83,7 +87,7 @@ func New(cfg Config, optFns ...Option) *Client {
 		config: cfg,
 		opts:     opts,
 		registry: registry.New(),
-	}
+	},nil
 }
 
 func (c *Client) Register(name string,handler task.HandlerFunc) error{
@@ -118,4 +122,16 @@ func (c *Client) Stop() {
 		slog.Info("client stopping", "queue", c.config.Queue)
 		c.cancel()
 	}
+}
+
+func (cfg Config) validate() error {
+	if cfg.ServerURL=="" {
+		return fmt.Errorf("antrelay: ServerURL is required")
+	}
+
+	if cfg.Queue == "" {
+		return fmt.Errorf("antrelay: Queue is required")
+	}
+
+	return nil
 }

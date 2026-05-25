@@ -31,15 +31,18 @@ func main() {
 
 	slog.SetDefault(log)
 
-		c := client.New(
-		client.Config{
-			ServerURL: "http://localhost:8080",
-			Queue:     "orders-queue",
-		},
-		client.WithPollInterval(500*time.Millisecond),
-		client.WithHandlerTimeout(30*time.Second),
-	)
-
+c, err := client.New(
+    client.Config{
+        ServerURL: "http://localhost:8080",
+        Queue:     "orders-queue",
+    },
+    client.WithPollInterval(500*time.Millisecond),
+    client.WithHandlerTimeout(30*time.Second),
+)
+if err != nil {
+    slog.Error("failed to create client", "error", err)
+    os.Exit(1)
+}
 		if err := c.Register("processOrder", processOrder); err != nil {
 		slog.Error("failed to register handler", "error", err)
 		os.Exit(1)
