@@ -16,6 +16,7 @@ type Worker struct {
 	reporter reporter.Reporter
 	queue string
 	pollWait time.Duration
+	backoff *backoff
 }
 
 func New(
@@ -31,6 +32,7 @@ func New(
 		reporter: r,
 		queue: queue,
 		pollWait: pollInterval,
+		backoff: NewBackoff(pollInterval,30 * time.Second),
 	}
 }
 
@@ -53,15 +55,16 @@ func (w *Worker) Run(ctx context.Context){
 		t,err:=w.poller.Poll(w.queue)
 		if err!=nil{
 			log.Printf("worker: poll error:%v",err)
-			w.Sleep(ctx)
+			w.Sleep(ctx ,w.backoff.Next())
 			continue
 		}
 
 		if t==nil{
-			w.Sleep(ctx)
+			w.Sleep(ctx, w.backoff.Next())
 			continue
 		}
 
+		w.backoff.Reset()
 
 		log.Printf("worker: executing task %s (%s)", t.ID, t.FunctionName)
 
@@ -81,9 +84,9 @@ func (w *Worker) Run(ctx context.Context){
 	}
 }
 
-func (w *Worker) Sleep(ctx context.Context){
+func (w *Worker) Sleep(ctx context.Context,d time.Duration){
 	select{
 		case <-ctx.Done():
-		case <-time.After(w.pollWait):
+		case <-time.After(d):
 	}
 }
