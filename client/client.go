@@ -98,7 +98,7 @@ func (c *Client) Start(){
 	//rep := reporter.NewMock()
 	p := poller.NewHTTP(c.config.ServerURL)
     rep := reporter.NewHTTP(c.config.ServerURL)
-	ex := executor.New(c.registry)
+	ex := executor.New(c.registry).WithTimeout(c.opts.handlerTimeout)
 	w := worker.New(p, ex, rep, c.config.Queue, c.opts.pollInterval)
 
 //-------------------------------------------------------------	

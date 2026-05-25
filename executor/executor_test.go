@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/yadukrishnan2004/antrelay-sdk/executor"
@@ -121,4 +122,28 @@ func TestExecute(t *testing.T) {
 
 		assert.Equal(t, tk.ID, result.TaskID)
 	})
+
+	t.Run("returns error when handler exceeds timeout", func(t *testing.T) {
+    slowHandler := func(ctx context.Context, input []byte) ([]byte, error) {
+        select {
+        case <-ctx.Done():
+            return nil, ctx.Err() // respects cancellation
+        case <-time.After(5 * time.Second): // simulates slow work
+            return []byte(`{}`), nil
+        }
+    }
+
+    r := makeRegistry(map[string]task.HandlerFunc{
+        "slowHandler": slowHandler,
+    })
+
+    // create executor with very short timeout
+    ex := executor.New(r).WithTimeout(100 * time.Millisecond)
+    tk := task.New("slowHandler", []byte(`{}`), "orders-queue", 3)
+
+    result := ex.Executor(context.Background(), tk)
+
+    assert.False(t, result.Success)
+    assert.Contains(t, result.Error, "context deadline exceeded")
+})
 }

@@ -3,6 +3,7 @@ package executor
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/yadukrishnan2004/antrelay-sdk/registry"
 	"github.com/yadukrishnan2004/antrelay-sdk/task"
@@ -13,11 +14,21 @@ import (
 
 type Executor struct {
 	registry *registry.Registry
+	handlerTimeout time.Duration
 }
 
 func New(r *registry.Registry) *Executor {
 	return &Executor{
 		registry: r,
+		handlerTimeout: 30 * time.Second,
+	}
+}
+
+// WithTimeout returns a new Executor with a custom handler timeout.
+func (e *Executor) WithTimeout(d time.Duration) *Executor{
+	return &Executor{
+		registry: e.registry,
+		handlerTimeout: d,
 	}
 }
 
@@ -27,7 +38,11 @@ func (e *Executor) Executor(ctx context.Context, t *task.Task) *task.Result{
 		return task.NewResult(t.ID, nil, fmt.Errorf("executor: lookup failed: %w", err))
 	}
 
-	output,err:=e.safeRun(ctx,handler,t.Input)
+    // create a child context that cancels after handlerTimeout
+    timeoutCtx, cancel := context.WithTimeout(ctx, e.handlerTimeout)
+    defer cancel()
+
+    output, err := e.safeRun(timeoutCtx, handler, t.Input)
 	return task.NewResult(t.ID, output, err)
 }
 
