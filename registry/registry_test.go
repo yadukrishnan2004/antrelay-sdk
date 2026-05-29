@@ -13,23 +13,31 @@ func dummyHandler(_ context.Context, input []byte) ([]byte, error) {
 	return input, nil
 }
 
-func TestRegister(t *testing.T){
-	t.Run("registers a valid handler successfully",func(t *testing.T){
-		r:=registry.New()
+func TestRegister(t *testing.T) {
+	t.Run("registers a valid handler successfully", func(t *testing.T) {
+		r := registry.New()
 
-		err:=r.Register("processOrder", dummyHandler)
+		err := r.Register("processOrder", dummyHandler)
 
-		assert.NoError(t,err)
+		assert.NoError(t, err)
 	})
 
 	t.Run("returns error when handler is nil", func(t *testing.T) {
-		r:=registry.New()
+		r := registry.New()
 
 		err := r.Register("processOrder", nil)
 
 		assert.Error(t, err)
-		assert.Contains(t,err.Error(), "cannot be nil")
+		assert.Contains(t, err.Error(), "cannot be nil")
+	})
 
+	t.Run("returns error when handler is not a function", func(t *testing.T) {
+		r := registry.New()
+
+		err := r.Register("processOrder", "not-a-function")
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "must be a function")
 	})
 
 	t.Run("allows different names to be registered", func(t *testing.T) {
@@ -41,7 +49,6 @@ func TestRegister(t *testing.T){
 		assert.NoError(t, err1)
 		assert.NoError(t, err2)
 	})
-
 }
 
 func TestLookup(t *testing.T) {
@@ -70,13 +77,14 @@ func TestLookup(t *testing.T) {
 		_ = r.Register("processOrder", dummyHandler)
 
 		handler, _ := r.Lookup("processOrder")
-		result, err := handler(context.Background(), []byte(`{}`))
+		hFunc, ok := handler.(func(context.Context, []byte) ([]byte, error))
+		assert.True(t, ok)
+		result, err := hFunc(context.Background(), []byte(`{}`))
 
 		assert.NoError(t, err)
 		assert.Equal(t, []byte(`{}`), result)
 	})
 }
-
 
 func TestList(t *testing.T) {
 	t.Run("returns empty slice when nothing registered", func(t *testing.T) {
@@ -102,7 +110,6 @@ func TestList(t *testing.T) {
 
 // TestConcurrentAccess verifies the registry is safe when multiple
 // goroutines read and write at the same time.
-
 func TestConcurrentAccess(t *testing.T) {
 	r := registry.New()
 	_ = r.Register("processOrder", dummyHandler)

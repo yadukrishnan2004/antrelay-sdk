@@ -10,7 +10,6 @@ import (
 	"github.com/yadukrishnan2004/antrelay-sdk/poller"
 	"github.com/yadukrishnan2004/antrelay-sdk/registry"
 	"github.com/yadukrishnan2004/antrelay-sdk/reporter"
-	"github.com/yadukrishnan2004/antrelay-sdk/task"
 	"github.com/yadukrishnan2004/antrelay-sdk/worker"
 )
 
@@ -90,17 +89,18 @@ func New(cfg Config, optFns ...Option) (*Client,error) {
 	},nil
 }
 
-func (c *Client) Register(name string,handler task.HandlerFunc) error{
-	return c.registry.Register(name,handler)
+func (c *Client) Register(name string, handler interface{}) error {
+	return c.registry.Register(name, handler)
+}
+
+func (c *Client) Lookup(name string) (interface{}, error) {
+	return c.registry.Lookup(name)
 }
 
 func (c *Client) Start(){
 	ctx,cancel:=context.WithCancel(context.Background())
 	c.cancel=cancel
 
-//------------------------------------------------------------
-	//p:=poller.NewMock()
-	//rep := reporter.NewMock()
 	p := poller.NewHTTP(c.config.ServerURL)
     rep := reporter.NewHTTP(c.config.ServerURL)
 	ex := executor.New(c.registry).WithTimeout(c.opts.handlerTimeout)
@@ -111,8 +111,8 @@ func (c *Client) Start(){
    slog.Info("client starting",
         "queue", c.config.Queue,
         "server", c.config.ServerURL,
-        "poll_interval", c.opts.pollInterval,
-        "handler_timeout", c.opts.handlerTimeout,
+        "poll_interval", c.opts.pollInterval.String(),
+        "handler_timeout", c.opts.handlerTimeout.String(),
     )
 	go w.Run(ctx)
 }
